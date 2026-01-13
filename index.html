@@ -5,57 +5,97 @@
   <title>Голосовой ассистент</title>
 </head>
 <body>
-<h1>Голосовой ассистент</h1>
-<button id="btn">🎤 Говори</button>
-<p id="result">Нажми кнопку и говори</p>
+
+<button onclick="startRecognition()">🎤 Говори</button>
+<p id="result">Скажи что-нибудь</p>
 
 <script>
 let userName = null;
-const assistantName = "Великан";
+let assistantName = "IA";
 
-const btn = document.getElementById("btn");
-const result = document.getElementById("result");
-
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-if (!SpeechRecognition) {
-  alert("Распознавание речи не поддерживается вашим браузером");
-}
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
 
 const recognition = new SpeechRecognition();
 recognition.lang = "ru-RU";
-recognition.continuous = false;
+recognition.interimResults = false;
 
-btn.onclick = () => {
+function startRecognition() {
   recognition.start();
-};
+}
 
 recognition.onresult = (event) => {
   const text = event.results[0][0].transcript.toLowerCase();
-  result.innerText = text;
+  document.getElementById("result").innerText = text;
+  handleSpeech(text);
+};
 
-  // Если имя ещё не задано
-  if (!userName) {
-    if (text.includes("меня зовут")) {
-      userName = text.replace("меня зовут", "").trim();
-      speak(`О, круто! Тебя зовут ${userName}. А меня зовут ${assistantName}`);
-    } else {
-      speak("Скажи: меня зовут...");
+function handleSpeech(text) {
+
+  // ===== КАЛЬКУЛЯТОР (eval) =====
+  if (text.includes("сколько будет")) {
+    try {
+      let expression = text
+        .replace("сколько будет", "")
+        .replace("плюс", "+")
+        .replace("минус", "-")
+        .replace("умножить на", "*")
+        .replace("умножить", "*")
+        .replace("разделить на", "/")
+        .replace("разделить", "/")
+        .replace(/[^0-9+\-*/(). ]/g, "")
+        .trim();
+
+      const result = eval(expression);
+      speak(`Будет ${result}`);
+    } catch (e) {
+      speak("Ошибка в примере");
     }
     return;
   }
 
-  // Простые ответы
-  if (text.includes("привет")) {
-    speak(`Привет, ${userName}!`);
-  } else if (text.includes("как дела")) {
-    speak(`У меня всё отлично, ${userName}. А у тебя?`);
-  } else if (text.includes("как тебя зовут")) {
-    speak(`Меня зовут ${assistantName}`);
-  } else {
-    speak(`${userName}, я тебя услышал, но пока не знаю что ответить`);
+  // ===== ЗНАКОМСТВО =====
+  if (!userName) {
+    if (text.includes("меня зовут")) {
+      userName = text.replace("меня зовут", "").trim();
+      speak(`Приятно познакомиться, ${userName}! Меня зовут ${assistantName}.`);
+    } else {
+      speak("Как тебя зовут? Скажи: меня зовут...");
+    }
+    return;
   }
-};
+
+  // ===== ДИАЛОГИ =====
+  const dialogs = [
+    {
+      keywords: ["привет"],
+      answer: `Привет, ${userName}!`
+    },
+    {
+      keywords: ["как дела"],
+      answer: `У меня всё отлично, ${userName}!`
+    },
+    {
+      keywords: ["как тебя зовут"],
+      answer: `Меня зовут ${assistantName}`
+    },
+    {
+      keywords: ["что ты умеешь"],
+      answer: `Я умею разговаривать и считать примеры`
+    }
+  ];
+
+  for (let dialog of dialogs) {
+    for (let key of dialog.keywords) {
+      if (text.includes(key)) {
+        speak(dialog.answer);
+        return;
+      }
+    }
+  }
+
+  speak(`${userName}, я тебя не понял.`);
+}
 
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
@@ -63,5 +103,6 @@ function speak(text) {
   speechSynthesis.speak(utterance);
 }
 </script>
+
 </body>
 </html>
