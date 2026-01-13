@@ -13,6 +13,7 @@
 let userName = null;
 let assistantName = "IA";
 
+// ===== РАСПОЗНАВАНИЕ РЕЧИ =====
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -20,41 +21,58 @@ const recognition = new SpeechRecognition();
 recognition.lang = "ru-RU";
 recognition.interimResults = false;
 
+// ===== СТАРТ =====
 function startRecognition() {
   recognition.start();
 }
 
+// ===== РЕЗУЛЬТАТ РЕЧИ =====
 recognition.onresult = (event) => {
   const text = event.results[0][0].transcript.toLowerCase();
   document.getElementById("result").innerText = text;
   handleSpeech(text);
 };
 
+// ===== НОРМАЛИЗАЦИЯ МАТЕМАТИКИ =====
+function normalizeMath(text) {
+  return text
+    .replace(/сколько будет/gi, "")
+    .replace(/плюс/gi, "+")
+    .replace(/минус/gi, "-")
+    .replace(/умножить на/gi, "*")
+    .replace(/умножить/gi, "*")
+    .replace(/помножить на/gi, "*")
+    .replace(/помножить/gi, "*")
+    .replace(/икс/gi, "*")
+    .replace(/х/gi, "*")      // русская Х
+    .replace(/×/g, "*")
+    .replace(/разделить на/gi, "/")
+    .replace(/разделить/gi, "/")
+    .replace(/÷/g, "/")
+    .replace(/[^0-9+\-*/().]/g, "")
+    .trim();
+}
+
+// ===== ЛОГИКА =====
 function handleSpeech(text) {
 
-  // ===== КАЛЬКУЛЯТОР (eval) =====
+  // === КАЛЬКУЛЯТОР ===
   if (text.includes("сколько будет")) {
     try {
-      let expression = text
-        .replace("сколько будет", "")
-        .replace("плюс", "+")
-        .replace("минус", "-")
-        .replace("умножить на", "*")
-        .replace("умножить", "*")
-        .replace("разделить на", "/")
-        .replace("разделить", "/")
-        .replace(/[^0-9+\-*/(). ]/g, "")
-        .trim();
-
+      const expression = normalizeMath(text);
+      if (!expression) {
+        speak("Я не понял пример");
+        return;
+      }
       const result = eval(expression);
       speak(`Будет ${result}`);
-    } catch (e) {
+    } catch {
       speak("Ошибка в примере");
     }
     return;
   }
 
-  // ===== ЗНАКОМСТВО =====
+  // === ЗНАКОМСТВО ===
   if (!userName) {
     if (text.includes("меня зовут")) {
       userName = text.replace("меня зовут", "").trim();
@@ -65,38 +83,31 @@ function handleSpeech(text) {
     return;
   }
 
-  // ===== ДИАЛОГИ =====
-  const dialogs = [
-    {
-      keywords: ["привет"],
-      answer: `Привет, ${userName}!`
-    },
-    {
-      keywords: ["как дела"],
-      answer: `У меня всё отлично, ${userName}!`
-    },
-    {
-      keywords: ["как тебя зовут"],
-      answer: `Меня зовут ${assistantName}`
-    },
-    {
-      keywords: ["что ты умеешь"],
-      answer: `Я умею разговаривать и считать примеры`
-    }
-  ];
+  // === ДИАЛОГИ ===
+  if (text.includes("привет")) {
+    speak(`Привет, ${userName}!`);
+    return;
+  }
 
-  for (let dialog of dialogs) {
-    for (let key of dialog.keywords) {
-      if (text.includes(key)) {
-        speak(dialog.answer);
-        return;
-      }
-    }
+  if (text.includes("как дела")) {
+    speak(`У меня всё отлично, ${userName}!`);
+    return;
+  }
+
+  if (text.includes("как тебя зовут")) {
+    speak(`Меня зовут ${assistantName}`);
+    return;
+  }
+
+  if (text.includes("что ты умеешь")) {
+    speak("Я умею разговаривать и считать примеры");
+    return;
   }
 
   speak(`${userName}, я тебя не понял.`);
 }
 
+// ===== ГОЛОС =====
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "ru-RU";
